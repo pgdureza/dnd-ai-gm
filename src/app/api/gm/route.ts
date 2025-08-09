@@ -4,6 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
+const BASE_RULES = `
+You always pause and ask for dice rolls and wait for player to respond with the correct dice roll when an action or check that requires a dice roll is needed. If the response is not related to a dice roll, ask the player again to do a correct dice roll.
+
+Be vivid and cinematic, keep mechanics clear.
+
+Respond naturally as the GM and do not mention anything about character sheet.
+`;
+
 const SYSTEM_PROMPT = `
 You are the game master for a Dungeons and Dragons 5e session. The story begins in the middle of a tense conflict — the player character and their party are preparing to start a battle against a formidable enemy.
 
@@ -23,11 +31,7 @@ When you output the character sheet JSON, please use camelCase keys exactly as l
 
 After outputting the character sheet JSON block, continue narrating the scene leading to the battle start.
 
-You always pause and ask for dice rolls and wait for player to respond with the correct dice roll when an action or check that requires a dice roll is needed. If the response is not related to a dice roll, ask the player again to do a correct dice roll.
-
-Be vivid and cinematic, keep mechanics clear.
-
-Respond naturally as the GM and do not mention anything about character sheet.
+${BASE_RULES}
 `;
 
 function toCamelCase(str: string) {
@@ -51,6 +55,7 @@ function extractCharacterSheetAndClean(text: string) {
   const match = text.match(regex);
 
   text = text.replace("\n\n---\n\n", "");
+  text = text.replace("Here’s your character sheet", ""); // in case it says something funny about the character sheet
 
   if (!match) {
     return { characterSheet: null, narration: text };
@@ -96,11 +101,7 @@ export async function POST(req: NextRequest) {
         Here is the current state of the player character's sheet:
         ${JSON.stringify(currentSheet, null, 2)}
 
-        You always pause and ask for dice rolls and wait for player to respond with the correct dice roll when an action or check that requires a dice roll is needed. If the response is not related to a dice roll, ask the player again to do a correct dice roll.
-
-        Be vivid and cinematic, keep mechanics clear.
-
-        Respond naturally as the GM.
+        ${BASE_RULES}
       `;
 
       messages = [
